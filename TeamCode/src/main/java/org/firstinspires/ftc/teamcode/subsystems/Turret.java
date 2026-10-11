@@ -1,35 +1,42 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.qualcomm.robotcore.hardware.CRServoImplEx;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PwmControl;
-import com.qualcomm.robotcore.hardware.ServoImplEx;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 /**
  * Turret subsystem: turns the launcher (flywheel) and the camera left and right, like a tank turret
- * (issue #31, decisions 016, 017, 019).
+ * (issue #31, decisions 016, 017, 019, 021).
  *
  * Hardware:
- *   turretServo          positional servo that turns the turret. For now (temporary): goBILDA 2000 Series
- *                        Dual Mode Servo, 25-2 Torque (2000-0025-0002), in its default STANDARD (positional) mode,
- *                        300 degrees of travel. Don't switch it to continuous mode.
- *   turretEncoder        ELC Encoder V2 on the servo. Use the connector marked "D" (digital = quadrature),
- *                        NOT "A" (analog). Plugged into an Expansion Hub MOTOR ENCODER port (decision 019).
- *                        It counts from 0 at power-on, so it must be HOMED.
+ *   turretServo          CONTINUOUS ROTATION servo (decision 021). We tell it a SPEED (-1 to +1), not a position.
+ *                        For now (temporary): goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (2000-0025-0002),
+ *                        switched to continuous mode with the goBILDA Servo Programmer.
+ *                        Driver Station config type: "Continuous Rotation Servo".
+ *   turretEncoder        ELC Encoder V2, "D" (quadrature) connector, on an Expansion Hub MOTOR ENCODER port
+ *                        (decision 019). This is how the turret knows where it is.
  *   turretForwardSwitch  REV Magnetic Limit Switch: tells us when the turret is facing FORWARD (decision 017).
- *                        It is only an indicator, NOT a stop. It is also our HOME sensor.
+ *                        It is NOT a stop. It is our HOME sensor.
  *
- * Homing: the encoder doesn't know where the turret is until the forward switch triggers once.
- * Call update() every loop. The first time the switch triggers, that spot becomes 0 degrees.
- * Before a match, set the turret facing forward (the light turns GREEN), and it homes during INIT.
+ * How it works:
+ *   - A continuous servo doesn't know its own angle, so OUR CODE holds the angle using the encoder.
+ *     Call update() EVERY loop. It compares where the turret IS (encoder) with where we WANT it (target),
+ *     and spins the servo faster when far away and slower when close ("proportional control").
+ *   - HOMING: the encoder counts from 0 at power-on. The first time the forward switch triggers, that spot
+ *     becomes 0 degrees. Before a match, point the turret forward (the light turns GREEN) and it homes during INIT.
+ *   - Until it's homed, turnTo() does nothing and manual moves are SLOW. After homing, nothing moves past
+ *     MAX_LEFT / MAX_RIGHT. Nothing physical stops the turret, so these limits matter!
  *
  * Angles use our direction convention (decision 007):
  *   0 degrees = turret pointing straight FORWARD.   + = LEFT (counter-clockwise),  - = RIGHT.
  *
- * Calibrate the TODO constants with the "Turret Test" OpMode.
+ * Calibrate the TODO constants with the "Turret Test" OpMode, IN ORDER (issue #31):
+ *   1. SERVO_REVERSED   2. ENCODER_REVERSED   3. ENCODER_REVS_PER_TURRET_REV   4. limits   5. AIM_GAIN
  */
 public class Turret {
 
@@ -38,70 +45,128 @@ public class Turret {
     public static final String ENCODER_NAME = "turretEncoder";
     public static final String FORWARD_SWITCH_NAME = "turretForwardSwitch";
 
-    // The servo's signal range in microseconds. The goBILDA 2000 servo needs 500-2500 to use all 300 degrees.
-    // (The FTC SDK's default is 600-2400, which would only give about 270 degrees.) Check this if we change servos.
+    // The servo's signal range in microseconds (goBILDA 2000 series: 500-2500). Check this if we change servos.
     public static final double SERVO_PWM_MIN_US = 500;
     public static final double SERVO_PWM_MAX_US = 2500;
 
-    // TODO(#31): the servo position (0.0 to 1.0) that points the turret straight forward.
-    public static final double SERVO_FORWARD_POSITION = 0.5;
-    // TODO(#31): how many turret degrees one full servo range (0.0 -> 1.0) turns.
-    // Our 300-degree servo turning the turret directly = 300. With gears, divide by the gear ratio.
-    // Make it NEGATIVE if a bigger servo position turns RIGHT.
-    public static final double TURRET_DEGREES_PER_SERVO_RANGE = 300.0;
+    // TODO(#31) step 1: set to true if a POSITIVE speed turns the turret RIGHT (it should turn LEFT).
+    public static final boolean SERVO_REVERSED = false;
 
-    // ELC Encoder V2 data sheet: 4000 CPR (counts per revolution).
-    // TODO(#31): check it: turn the encoder's hex exactly ONE full turn by hand. Raw counts should change by about 4000.
+    // ELC Encoder V2 data sheet: 4000 counts per revolution.
     public static final double ENCODER_COUNTS_PER_REV = 4000.0;
-    // TODO(#31): encoder turns per turret turn (the gear ratio). 1.0 if they turn together.
-    public static final double ENCODER_REVS_PER_TURRET_REV = 1.0;
-    // TODO(#31): set to true if "Turret angle" goes DOWN when the turret turns LEFT.
+    // TODO(#31) step 2: set to true if "Turret angle" goes DOWN when the turret turns LEFT.
     public static final boolean ENCODER_REVERSED = false;
+    // TODO(#31) step 3: encoder turns per ONE turret turn (the gear ratio between the servo and the turret).
+    // The encoder is on the servo. Example: servo gear 20 teeth, turret gear 100 teeth = 100 / 20 = 5.0
+    public static final double ENCODER_REVS_PER_TURRET_REV = 1.0;
 
-    // TODO(#31): how far the turret may turn each way. Nothing physical stops the turret,
+    // TODO(#31) step 4: how far the turret may turn each way. Nothing physical stops the turret,
     // so these keep it from turning too far (into wires or the frame).
     public static final double MAX_LEFT_DEGREES = 90.0;
     public static final double MAX_RIGHT_DEGREES = -90.0;
 
+    // TODO(#31) step 5: tune the aiming. Speed = AIM_GAIN x (degrees away from the target).
+    // Example: 0.02 means 10 degrees away = speed 0.2. Bigger = faster but may wobble past the target.
+    public static final double AIM_GAIN = 0.02;
+    public static final double MAX_SPEED = 0.6;            // fastest the turret is allowed to turn (0 to 1)
+    public static final double TOLERANCE_DEGREES = 1.0;    // "close enough" to the target: stop here
+    public static final double NOT_HOMED_MAX_SPEED = 0.15; // slow, for moving before the turret is homed
+
+    // Safety: if the turret ends up this much FARTHER from the target than when it started,
+    // something is backwards (step 1 or 2), so we stop instead of spinning away.
+    public static final double RUNAWAY_DEGREES = 20.0;
+
     // TODO(#31): check with "Turret Test". REV's switch reads false when a magnet is near (active low).
     public static final boolean FORWARD_SWITCH_TRIGGERED_STATE = false;
 
-    private final ServoImplEx turretServo;
+    private final CRServoImplEx turretServo;
     // Only used to READ the encoder port. We never give it power.
     private final DcMotorEx turretEncoder;
     private final DigitalChannel turretForwardSwitch;
-
-    // The angle we last told the turret to go to. NaN until the first command.
-    private double targetDegrees = Double.NaN;
 
     // Homing: the encoder count when the turret was facing forward.
     private boolean homed = false;
     private int homeCounts = 0;
 
+    // What we've been asked to do. A TARGET angle (turnTo) or a MANUAL speed (setManualSpeed).
+    private double targetDegrees = Double.NaN;  // NaN = no target
+    private double manualSpeed = 0.0;
+    private double startErrorDegrees = 0.0;
+    private boolean runawayStopped = false;
+    private boolean commanded = false;          // false until the first command: never move during INIT
+    private double speedSent = 0.0;
+
     public Turret(HardwareMap hardwareMap) {
-        turretServo = hardwareMap.get(ServoImplEx.class, SERVO_NAME);
-        // Only sets the signal range; the servo doesn't move until the first turnTo().
-        turretServo.setPwmRange(new PwmControl.PwmRange(SERVO_PWM_MIN_US, SERVO_PWM_MAX_US));
+        turretServo = hardwareMap.get(CRServoImplEx.class, SERVO_NAME);
         turretEncoder = hardwareMap.get(DcMotorEx.class, ENCODER_NAME);
         turretForwardSwitch = hardwareMap.get(DigitalChannel.class, FORWARD_SWITCH_NAME);
         turretForwardSwitch.setMode(DigitalChannel.Mode.INPUT);
 
-        // We do NOT move the servo here. INIT must not move anything (game rule G304.H).
+        turretServo.setDirection(SERVO_REVERSED ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+        // Only sets the signal range. Nothing moves until the first command (game rule G304.H: INIT must not move).
+        turretServo.setPwmRange(new PwmControl.PwmRange(SERVO_PWM_MIN_US, SERVO_PWM_MAX_US));
     }
 
-    /** Call this once every loop, including during INIT. It homes the encoder when the turret faces forward. */
+    /**
+     * Call this ONCE EVERY LOOP, including during INIT.
+     * It homes the encoder at the forward switch, and spins the servo toward the target.
+     */
     public void update() {
         if (!homed && isFacingForward()) {
             homeCounts = turretEncoder.getCurrentPosition();
             homed = true;
         }
+
+        if (!commanded) {
+            return; // nothing asked yet: send nothing, so the turret can't move during INIT
+        }
+
+        double speed;
+        if (!Double.isNaN(targetDegrees)) {
+            speed = speedToTarget();
+        } else {
+            speed = manualSpeed;
+            if (!homed) {
+                speed = clamp(speed, NOT_HOMED_MAX_SPEED);
+            }
+        }
+
+        // Never go past the limits (once homed, we know where they are).
+        if (homed && speed > 0 && getAngle() >= MAX_LEFT_DEGREES) {
+            speed = 0.0;
+        }
+        if (homed && speed < 0 && getAngle() <= MAX_RIGHT_DEGREES) {
+            speed = 0.0;
+        }
+
+        speedSent = speed;
+        turretServo.setPower(speed);
     }
 
-    /** Turn the turret to an angle (0 = forward, + = left). Call after START, never during INIT. */
+    /** Proportional control: faster when far from the target, slower when close, stop when close enough. */
+    private double speedToTarget() {
+        double error = targetDegrees - getAngle(); // + = target is to the LEFT
+        if (Math.abs(error) > Math.abs(startErrorDegrees) + RUNAWAY_DEGREES) {
+            runawayStopped = true;
+            targetDegrees = Double.NaN;
+            manualSpeed = 0.0;
+            return 0.0;
+        }
+        if (Math.abs(error) < TOLERANCE_DEGREES) {
+            return 0.0;
+        }
+        return clamp(AIM_GAIN * error, MAX_SPEED);
+    }
+
+    /** Turn the turret to an angle (0 = forward, + = left) and hold it there. Only works once homed. */
     public void turnTo(double degrees) {
-        degrees = Math.max(MAX_RIGHT_DEGREES, Math.min(MAX_LEFT_DEGREES, degrees));
-        targetDegrees = degrees;
-        turretServo.setPosition(SERVO_FORWARD_POSITION + degrees / TURRET_DEGREES_PER_SERVO_RANGE);
+        commanded = true;
+        if (!homed) {
+            return;
+        }
+        targetDegrees = Math.max(MAX_RIGHT_DEGREES, Math.min(MAX_LEFT_DEGREES, degrees));
+        startErrorDegrees = targetDegrees - getAngle();
+        runawayStopped = false;
     }
 
     /** Point the turret straight forward. */
@@ -109,9 +174,37 @@ public class Turret {
         turnTo(0.0);
     }
 
+    /**
+     * Turn at a speed from -1 (right) to +1 (left), for driver control. 0 = stop.
+     * This cancels any turnTo() target. Before homing, it is limited to a slow speed.
+     */
+    public void setManualSpeed(double speed) {
+        commanded = true;
+        targetDegrees = Double.NaN;
+        manualSpeed = clamp(speed, 1.0);
+    }
+
+    /** Stop turning and forget the target. */
+    public void stop() {
+        targetDegrees = Double.NaN;
+        manualSpeed = 0.0;
+        speedSent = 0.0;
+        turretServo.setPower(0.0);
+    }
+
     /** True once the encoder has been homed (the forward switch has triggered at least once). */
     public boolean isHomed() {
         return homed;
+    }
+
+    /** True when there is a target and the turret is within TOLERANCE_DEGREES of it. */
+    public boolean isAtTarget() {
+        return !Double.isNaN(targetDegrees) && Math.abs(targetDegrees - getAngle()) < TOLERANCE_DEGREES;
+    }
+
+    /** True if the runaway safety stopped the turret. Check SERVO_REVERSED and ENCODER_REVERSED. */
+    public boolean wasRunawayStopped() {
+        return runawayStopped;
     }
 
     /** The real turret angle from the encoder, in degrees (0 = forward, + = left). NaN until homed. */
@@ -124,9 +217,14 @@ public class Turret {
         return ENCODER_REVERSED ? -degrees : degrees;
     }
 
-    /** The angle we last told the turret to go to (NaN if we haven't moved it yet). */
+    /** The angle we're turning to (NaN if there's no target). */
     public double getTargetAngle() {
         return targetDegrees;
+    }
+
+    /** The speed we last sent to the servo (-1 to +1). */
+    public double getSpeed() {
+        return speedSent;
     }
 
     /** Raw encoder count. Used for calibrating. */
@@ -142,11 +240,18 @@ public class Turret {
         return turretForwardSwitch.getState() == FORWARD_SWITCH_TRIGGERED_STATE;
     }
 
+    private static double clamp(double value, double limit) {
+        return Math.max(-limit, Math.min(limit, value));
+    }
+
     /** Show this subsystem's status on the Driver Station. */
     public void addTelemetry(Telemetry telemetry) {
-        telemetry.addData("Turret homed", homed ? "yes" : "NO: turn the turret forward once");
+        telemetry.addData("Turret homed", homed ? "yes" : "NO: turn the turret to forward once (slow until then)");
         telemetry.addData("Turret angle (°)  +left", homed ? String.format("%.1f", getAngle()) : "unknown");
-        telemetry.addData("Turret target (°)", Double.isNaN(targetDegrees) ? "not moved yet" : String.format("%.1f", targetDegrees));
-        telemetry.addData("Turret facing forward (switch)", isFacingForward() ? "YES" : "no");
+        telemetry.addData("Turret target (°)", Double.isNaN(targetDegrees) ? "none (manual)" : String.format("%.1f", targetDegrees));
+        telemetry.addData("Turret speed sent", "%.2f  (+ = left)", speedSent);
+        if (runawayStopped) {
+            telemetry.addLine("⚠️ RUNAWAY STOP: turret moved AWAY from the target. Check SERVO_REVERSED / ENCODER_REVERSED");
+        }
     }
 }

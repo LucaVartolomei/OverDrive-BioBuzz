@@ -212,3 +212,15 @@ Issue: #22, #25
 Context: Decision 014 made Basic Auton LEAVE + PARK. Issue #22 also planned a "Level 2" with launching the preloads.
 Decision: **Basic Auton only drives**, to earn the movement points (LEAVE + PARK, and the SWARM ranking point with our partner). **No camera, turret or launcher.** Anything using them goes in **Advanced Auton** (#25) or a later refactor.
 Who: Team
+
+## 021 – Turret servo in continuous mode; our code holds the angle  (2026-10-11)
+Status: Accepted
+Issue: #31
+Context: In Turret Test, the positional servo (300° of travel) only turned the turret a little each way. A turret usually needs more travel than a positional servo can give through its gears.
+Options: Change the gearing, use a servo with more travel, or switch the servo to **continuous rotation**.
+Decision:
+- **`turretServo` runs in continuous mode.** The goBILDA 2000 Dual Mode servo is switched with the **goBILDA Servo Programmer** (code can't do it). Driver Station config type: **Continuous Rotation Servo**
+- The code sends a **speed**, not a position. **Our code holds the angle** using the ELC encoder (019): `Turret.update()` runs every loop and uses **proportional control** (speed = `AIM_GAIN` × degrees from the target, up to `MAX_SPEED`)
+- **Homing is required:** `turnTo()` only works after the forward switch has triggered once. Before that, manual moves are slow (`NOT_HOMED_MAX_SPEED`)
+- **Safety:** after homing, nothing moves past `MAX_LEFT/RIGHT_DEGREES`. A **runaway stop** halts the turret if it moves away from its target (a sign that `SERVO_REVERSED` or `ENCODER_REVERSED` is wrong). Nothing moves until the first command (INIT rule)
+Who: Team

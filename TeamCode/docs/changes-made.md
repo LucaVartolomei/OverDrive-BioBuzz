@@ -52,3 +52,6 @@ Hardware review. The ELC encoder moves to its **quadrature** output on an **Expa
 Read the ELC Encoder V2 data sheet: use its **"D"** connector (quadrature), 3.3–3.6 V and JST-PH 4-pin match the hub's encoder port, 4000 counts per revolution (confirms `ENCODER_COUNTS_PER_REV`). Added a one-turn check to #31.
 Turret servo (temporary) is a goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (2000-0025-0002): 300° in standard mode. `Turret` now sets its signal range to 500–2500 µs (the SDK default 600–2400 would only give ~270°) and assumes 300° of travel.
 "Turret Test" upgraded: HOLD the dpad to turn the turret smoothly (bumper = slow), Y sets a mark to measure moves, and telemetry explains the ELC encoder (raw counts, counts since mark in degrees, encoder turns, speed) next to the servo's expected angle. Light stays GREEN when facing forward.
+
+10/11:
+Turret Test showed the positional servo only turns the turret a little each way. Switched the turret servo to **continuous mode** (decision 021): `Turret` now sends speeds, and `update()` holds the angle with the ELC encoder (proportional control, soft limits, slow until homed, runaway stop). Turret Test: hold the dpad to turn at a speed; A / X / B aim using the encoder once homed.

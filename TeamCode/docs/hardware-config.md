@@ -70,11 +70,11 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 |---|---|---|---|
 | `limelight` | Limelight 3A | Control Hub / **USB 3.0 port** | ⚠️ **Must use the port labeled USB 3.0.** Mounted on the turret, fixed tilt angle: ___° up |
 
-## Turret (`subsystems/Turret.java`, issue #31, decisions 016, 017, 019)
+## Turret (`subsystems/Turret.java`, issue #31, decisions 016, 017, 019, 021)
 
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
-| `turretServo` | Servo | ___ / servo port ___ | **Temporary:** goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (**2000-0025-0002**), standard (positional) mode, **300°**. Code sets its signal range to 500–2500 µs (`Turret.SERVO_PWM_MIN_US/MAX_US`). Will be upgraded later: recheck those constants then |
+| `turretServo` | **Continuous Rotation Servo** | ___ / servo port ___ | **Temporary:** goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (**2000-0025-0002**), switched to **continuous mode** with the goBILDA Servo Programmer (decision 021). Code sets its signal range to 500–2500 µs. Will be upgraded later: recheck `Turret.java` constants then |
 | `turretEncoder` | Motor (encoder only, never powered) | **Expansion Hub** / motor-encoder port ___ | ELC Encoder V2, **quadrature** output (decision 019): use the encoder's **"D" connector** (not "A" = analog). Configure the motor port with this name; the code only reads its encoder. Data sheet: 3.3–3.6 V (the hub's encoder port gives 3.3 V ✅), JST-PH 4-pin (same as the hub ✅), 4000 counts per revolution. ⚠️ Pin order isn't on the data sheet: use the cable that came with it and check "Encoder counts" changes when you turn it |
 | `turretForwardSwitch` | Digital Device | ___ / digital port ___ | REV Magnetic Limit Switch: triggers when the turret faces **forward** (indicator, not a stop, decision 017). Digital ports have 2 channels (n, n+1): if it never changes, try the other channel number |
 

@@ -3,26 +3,30 @@ package org.firstinspires.ftc.teamcode.opmodes.test;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.Light;
 import org.firstinspires.ftc.teamcode.subsystems.Turret;
 
 /**
- * TEST: turn the turret with the dpad and learn how the ELC encoder works (issue #31).
+ * TEST: turn the turret with the dpad, learn how the ELC encoder works, and calibrate (issue #31).
+ * The turret servo is in CONTINUOUS mode (decision 021): the dpad sets a SPEED, and the encoder tells us the angle.
  *
  * Controls (gamepad 1), all after START:
- *   HOLD dpad left / right   turn the turret left / right. Hold a bumper too for SLOW (fine) moves
+ *   HOLD dpad left / right   turn the turret left / right. Hold a bumper too for SLOW moves
  *   Y                        set a MARK: "Since mark" counts from here. Use it to measure a move
- *   A                        turret.turnForward()  (uses the calibrated constants)
- *   X / B                    turret.turnTo(+45) / turnTo(-45)  (left / right)
+ *   A                        turn to forward (0°)      } these use the encoder to aim,
+ *   X / B                    turn to 45° left / right  } so they only work once HOMED
+ *   any dpad                 cancels A / X / B
  *
- * The light turns GREEN when the turret faces forward (the forward switch).
- * The first time that happens, the encoder is HOMED: that spot becomes 0 degrees.
+ * The light turns GREEN when the turret faces forward. The first time that happens, the encoder is HOMED.
+ * Until then, the turret only moves slowly.
  *
- * If dpad LEFT turns the turret RIGHT, make TURRET_DEGREES_PER_SERVO_RANGE negative in Turret.java.
- * The dpad does NOT use the MAX_LEFT/RIGHT limits, so move slowly near the ends!
+ * Calibrate IN ORDER (steps in issue #31). Don't try A / X / B until steps 1 and 2 are right!
+ *   1. Dpad LEFT must turn the turret LEFT. If not: SERVO_REVERSED = true in Turret.java
+ *   2. Turning LEFT must make "Turret angle" go UP. If not: ENCODER_REVERSED = true
+ *   3. Turn exactly 90° left: "Turret angle" should read about 90. If not: fix ENCODER_REVS_PER_TURRET_REV
+ *   4. Set MAX_LEFT_DEGREES / MAX_RIGHT_DEGREES
+ *   5. Tune AIM_GAIN with A / X / B
  *
  * How the ELC encoder works:
  *   It counts tiny steps as its shaft turns: 4000 counts = 1 full turn, so about 11 counts = 1 degree.
@@ -32,80 +36,68 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
 @TeleOp(name = "Turret Test", group = "Tests")
 public class TurretTest extends LinearOpMode {
 
-    // How fast the dpad turns the servo, in servo positions per second (the full range is 0.0 to 1.0).
-    static final double DPAD_SPEED = 0.25;       // full range in 4 seconds
-    static final double DPAD_SLOW_SPEED = 0.05;  // full range in 20 seconds
+    // Dpad speeds (0 to 1). Before homing, Turret limits everything to NOT_HOMED_MAX_SPEED anyway.
+    static final double DPAD_SPEED = 0.4;
+    static final double DPAD_SLOW_SPEED = 0.1;
 
     @Override
     public void runOpMode() {
         Turret turret = new Turret(hardwareMap);
         Light light = new Light(hardwareMap);
-        // Test-only: the same servo and encoder, used directly for calibration (code-structure rule 8).
-        Servo turretServo = hardwareMap.get(Servo.class, Turret.SERVO_NAME);
+        // Test-only: the same encoder, used directly to show its speed (code-structure rule 8).
         DcMotorEx turretEncoder = hardwareMap.get(DcMotorEx.class, Turret.ENCODER_NAME);
 
-        double servoPosition = Turret.SERVO_FORWARD_POSITION;
         int markCounts = turret.getEncoderCounts();
-        // Dpad LEFT should turn LEFT. Flip the direction if the servo is mounted the other way.
-        double leftDirection = Math.signum(Turret.TURRET_DEGREES_PER_SERVO_RANGE);
+        boolean dpadWasHeld = false;
 
         // INIT: nothing moves until START (game rule G304.H). Readings, homing and the light work already.
         while (opModeInInit()) {
             turret.update();
             showForward(turret, light);
-            telemetry.addLine("Press START. The turret will go to SERVO_FORWARD_POSITION.");
+            telemetry.addLine("Press START. Nothing moves until you press a button.");
             telemetry.addLine("Don't force the turret by hand: the servo's gears can strip.");
             telemetry.addLine();
-            addReadings(turret, turretEncoder, servoPosition, markCounts);
+            addReadings(turret, turretEncoder, markCounts);
             telemetry.update();
         }
 
-        turretServo.setPosition(servoPosition);
-        ElapsedTime loopTimer = new ElapsedTime();
-
         while (opModeIsActive()) {
-            turret.update();
-
-            // Hold the dpad to turn. Speed x time = how far to move this loop.
-            double seconds = loopTimer.seconds();
-            loopTimer.reset();
+            // Dpad = manual speed. Letting go stops the turret.
             double speed = (gamepad1.left_bumper || gamepad1.right_bumper) ? DPAD_SLOW_SPEED : DPAD_SPEED;
             if (gamepad1.dpad_left) {
-                servoPosition += leftDirection * speed * seconds;
-            }
-            if (gamepad1.dpad_right) {
-                servoPosition -= leftDirection * speed * seconds;
-            }
-            if (gamepad1.dpad_left || gamepad1.dpad_right) {
-                servoPosition = Math.max(0.0, Math.min(1.0, servoPosition));
-                turretServo.setPosition(servoPosition);
+                turret.setManualSpeed(speed);
+                dpadWasHeld = true;
+            } else if (gamepad1.dpad_right) {
+                turret.setManualSpeed(-speed);
+                dpadWasHeld = true;
+            } else if (dpadWasHeld) {
+                turret.setManualSpeed(0.0);
+                dpadWasHeld = false;
             }
 
             if (gamepad1.yWasPressed()) {
                 markCounts = turret.getEncoderCounts();
             }
-            // Buttons that use the calibrated constants. Keep servoPosition in sync so the dpad continues from there.
             if (gamepad1.aWasPressed()) {
                 turret.turnForward();
-                servoPosition = turretServo.getPosition();
             }
             if (gamepad1.xWasPressed()) {
                 turret.turnTo(45);
-                servoPosition = turretServo.getPosition();
             }
             if (gamepad1.bWasPressed()) {
                 turret.turnTo(-45);
-                servoPosition = turretServo.getPosition();
             }
 
+            turret.update();
             showForward(turret, light);
 
             telemetry.addLine("HOLD dpad = turn (+bumper = slow)   Y = mark   A = forward   X/B = 45° L/R");
             telemetry.addLine();
-            addReadings(turret, turretEncoder, servoPosition, markCounts);
+            addReadings(turret, turretEncoder, markCounts);
             telemetry.update();
         }
 
+        turret.stop();
         light.off();
     }
 
@@ -114,20 +106,20 @@ public class TurretTest extends LinearOpMode {
         light.setColor(turret.isFacingForward() ? Light.Color.GREEN : Light.Color.OFF);
     }
 
-    private void addReadings(Turret turret, DcMotorEx turretEncoder, double servoPosition, int markCounts) {
+    private void addReadings(Turret turret, DcMotorEx turretEncoder, int markCounts) {
         int counts = turret.getEncoderCounts();
         int sinceMark = counts - markCounts;
 
         telemetry.addLine("--- Forward switch ---");
         telemetry.addData("Facing forward", turret.isFacingForward() ? "YES (light GREEN)" : "no");
-        telemetry.addData("Homed", turret.isHomed() ? "yes: forward = 0°" : "NO: turn the turret to forward once");
 
-        telemetry.addLine("--- Servo (what we ASK for) ---");
-        telemetry.addData("Servo position", "%.3f  (0.0 to 1.0)", servoPosition);
-        telemetry.addData("Expected angle", "%.1f°  (from the servo position)",
-                (servoPosition - Turret.SERVO_FORWARD_POSITION) * Turret.TURRET_DEGREES_PER_SERVO_RANGE);
+        telemetry.addLine("--- Turret ---");
+        turret.addTelemetry(telemetry);
+        if (!turret.isHomed()) {
+            telemetry.addLine("A / X / B do nothing until homed. Turn to forward with the dpad first.");
+        }
 
-        telemetry.addLine("--- ELC encoder (what REALLY happens) ---");
+        telemetry.addLine("--- ELC encoder (on the servo) ---");
         telemetry.addData("Raw counts", "%d  (0 at power-on)", counts);
         telemetry.addData("Since mark (Y)", "%d counts = %.1f° of encoder turn",
                 sinceMark, sinceMark / Turret.ENCODER_COUNTS_PER_REV * 360.0);
@@ -135,9 +127,5 @@ public class TurretTest extends LinearOpMode {
                 counts / Turret.ENCODER_COUNTS_PER_REV, Turret.ENCODER_COUNTS_PER_REV);
         telemetry.addData("Speed", "%.0f counts/s = %.0f°/s",
                 turretEncoder.getVelocity(), turretEncoder.getVelocity() / Turret.ENCODER_COUNTS_PER_REV * 360.0);
-        telemetry.addData("Turret angle", turret.isHomed() ? String.format("%.1f°  (+ = left)", turret.getAngle()) : "unknown until homed");
-
-        telemetry.addLine();
-        telemetry.addLine("Expected and Turret angle should match. If not, check the TODO constants in Turret.java.");
     }
 }

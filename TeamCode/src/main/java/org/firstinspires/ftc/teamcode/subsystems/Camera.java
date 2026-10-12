@@ -4,6 +4,7 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.hardware.limelightvision.LLStatus;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -65,8 +66,47 @@ public class Camera {
     }
 
     /** Show this subsystem's status on the Driver Station. */
+    /** Show connection and detection details on the Driver Station. */
+    /** Show connection, camera status, and detection details. */
     public void addTelemetry(Telemetry telemetry) {
         telemetry.addData("Camera connected", limelight.isConnected());
+
+        LLStatus status = limelight.getStatus();
+
+        if (status != null) {
+            telemetry.addData("Status name", status.getName());
+            telemetry.addData("Status pipeline", status.getPipelineIndex());
+            telemetry.addData("Status type", status.getPipelineType());
+            telemetry.addData("Status FPS", status.getFps());
+        } else {
+            telemetry.addData("Camera status", "null");
+        }
+
+        LLResult result = limelight.getLatestResult();
+
+        if (result == null) {
+            telemetry.addData("Result available", false);
+            telemetry.addData("AprilTags seen", "No result received");
+            return;
+        }
+
+        telemetry.addData("Result available", true);
+        telemetry.addData("Actual pipeline", result.getPipelineIndex());
+        telemetry.addData("Actual pipeline type", result.getPipelineType());
+        telemetry.addData("Result age (ms)", result.getStaleness());
+        telemetry.addData("Result valid", result.isValid());
+
+        List<LLResultTypes.FiducialResult> tags =
+                result.getFiducialResults();
+
+        telemetry.addData("Raw AprilTag count", tags.size());
+
+        List<Integer> ids = new ArrayList<>();
+        for (LLResultTypes.FiducialResult tag : tags) {
+            ids.add(tag.getFiducialId());
+        }
+
+        telemetry.addData("Raw AprilTag IDs", ids);
         telemetry.addData("AprilTags seen", getVisibleTagIds());
     }
 }

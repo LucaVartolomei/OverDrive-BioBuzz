@@ -68,7 +68,7 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
-| `limelight` | Limelight 3A | Control Hub / **USB 3.0 port** | ⚠️ **Must use the port labeled USB 3.0.** Mounted on the turret, fixed tilt angle: ___° up |
+| `limelight` | Limelight 3A | Control Hub / **USB 3.0 port** | ⚠️ **Must use the port labeled USB 3.0.** Mounted on turret, edit tilt angle constant `CAMERA_MOUNT_TILT_DEGREES` in `Camera.java` |
 
 ## Turret (`subsystems/Turret.java`, issue #31, decisions 016, 017, 019, 021)
 

@@ -55,3 +55,6 @@ Turret servo (temporary) is a goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (
 
 10/11:
 Turret Test showed the positional servo only turns the turret a little each way. Switched the turret servo to **continuous mode** (decision 021): `Turret` now sends speeds, and `update()` holds the angle with the ELC encoder (proportional control, soft limits, slow until homed, runaway stop). Turret Test: hold the dpad to turn at a speed; A / X / B aim using the encoder once homed.
+
+10/14:
+Updated `subsystems/Camera.java` for issue #7 & Limelight AprilTag tracking: added BIOBUZZ Cell Tag ID ranges (30-45), alliance tag helper methods, horizontal/vertical angle offsets (`getTargetDegreesLeft()`, `getTargetDegreesUp()`), and target area telemetry. Camera has already been configured in limelight localhost.

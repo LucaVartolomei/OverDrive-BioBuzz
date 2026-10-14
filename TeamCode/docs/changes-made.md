@@ -58,3 +58,6 @@ Turret Test showed the positional servo only turns the turret a little each way.
 
 10/14:
 Updated `subsystems/Camera.java` for issue #7 & Limelight AprilTag tracking: added BIOBUZZ Cell Tag ID ranges (30-45), alliance tag helper methods, horizontal/vertical angle offsets (`getTargetDegreesLeft()`, `getTargetDegreesUp()`), and target area telemetry. Camera has already been configured in limelight localhost.
+
+10/14:
+Turret servo is now an **Axon MAX** (MK2) in continuous mode. Changed `Turret.SERVO_PWM_MIN_US/MAX_US` to Axon's continuous range, 1050–1950 µs, so speed 1.0 = full speed (with 500–2500, the Axon would hit full speed at about 0.45). No other code changes.

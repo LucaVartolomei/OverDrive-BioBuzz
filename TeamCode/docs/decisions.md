@@ -219,7 +219,7 @@ Issue: #31
 Context: In Turret Test, the positional servo (300° of travel) only turned the turret a little each way. A turret usually needs more travel than a positional servo can give through its gears.
 Options: Change the gearing, use a servo with more travel, or switch the servo to **continuous rotation**.
 Decision:
-- **`turretServo` runs in continuous mode.** The goBILDA 2000 Dual Mode servo is switched with the **goBILDA Servo Programmer** (code can't do it). Driver Station config type: **Continuous Rotation Servo**
+- **`turretServo` runs in continuous mode.** The servo is switched with its maker's programmer (code can't do it). Driver Station config type: **Continuous Rotation Servo**. (10/14: now an **Axon MAX**, signal range 1050–1950 µs; it was a goBILDA 2000 at first)
 - The code sends a **speed**, not a position. **Our code holds the angle** using the ELC encoder (019): `Turret.update()` runs every loop and uses **proportional control** (speed = `AIM_GAIN` × degrees from the target, up to `MAX_SPEED`)
 - **Homing is required:** `turnTo()` only works after the forward switch has triggered once. Before that, manual moves are slow (`NOT_HOMED_MAX_SPEED`)
 - **Safety:** after homing, nothing moves past `MAX_LEFT/RIGHT_DEGREES`. A **runaway stop** halts the turret if it moves away from its target (a sign that `SERVO_REVERSED` or `ENCODER_REVERSED` is wrong). Nothing moves until the first command (INIT rule)

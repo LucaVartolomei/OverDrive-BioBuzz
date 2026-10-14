@@ -38,9 +38,9 @@ public class Camera {
     public Camera(HardwareMap hardwareMap) {
         limelight = hardwareMap.get(Limelight3A.class, LIMELIGHT_NAME);
 
-        limelight.pipelineSwitch(APRILTAG_PIPELINE);
-        // Start reading results. Nothing moves, so this is OK during INIT.
+        // Start polling connection first, then switch to the AprilTag pipeline slot.
         limelight.start();
+        limelight.pipelineSwitch(APRILTAG_PIPELINE);
     }
 
     /** True if the Limelight sees at least one AprilTag right now. */
@@ -50,11 +50,18 @@ public class Camera {
 
     /** The ID numbers of every AprilTag the Limelight sees right now (BIOBUZZ uses IDs 30-45). */
     public List<Integer> getVisibleTagIds() {
+        return getVisibleTagIds(limelight.getLatestResult());
+    }
+
+    /** Helper method using an existing LLResult packet to avoid double-polling the SDK. */
+    public List<Integer> getVisibleTagIds(LLResult result) {
         List<Integer> ids = new ArrayList<>();
-        LLResult result = limelight.getLatestResult();
-        if (result != null && result.isValid()) {
-            for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
-                ids.add(tag.getFiducialId());
+        if (result != null) {
+            List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+            if (fiducials != null) {
+                for (LLResultTypes.FiducialResult tag : fiducials) {
+                    ids.add(tag.getFiducialId());
+                }
             }
         }
         return ids;
@@ -65,48 +72,28 @@ public class Camera {
         limelight.stop();
     }
 
-    /** Show this subsystem's status on the Driver Station. */
-    /** Show connection and detection details on the Driver Station. */
-    /** Show connection, camera status, and detection details. */
+    /** Show clean connection and detection details on the Driver Station. */
     public void addTelemetry(Telemetry telemetry) {
-        telemetry.addData("Camera connected", limelight.isConnected());
+        boolean connected = limelight.isConnected();
+        telemetry.addData("Camera connected", connected);
 
-        LLStatus status = limelight.getStatus();
-
-        if (status != null) {
-            telemetry.addData("Status name", status.getName());
-            telemetry.addData("Status pipeline", status.getPipelineIndex());
-            telemetry.addData("Status type", status.getPipelineType());
-            telemetry.addData("Status FPS", status.getFps());
-        } else {
-            telemetry.addData("Camera status", "null");
-        }
-
-        LLResult result = limelight.getLatestResult();
-
-        if (result == null) {
-            telemetry.addData("Result available", false);
-            telemetry.addData("AprilTags seen", "No result received");
+        if (!connected) {
+            telemetry.addData("Camera status", "Disconnected - Check USB 3.0 port");
             return;
         }
 
-        telemetry.addData("Result available", true);
-        telemetry.addData("Actual pipeline", result.getPipelineIndex());
-        telemetry.addData("Actual pipeline type", result.getPipelineType());
-        telemetry.addData("Result age (ms)", result.getStaleness());
-        telemetry.addData("Result valid", result.isValid());
-
-        List<LLResultTypes.FiducialResult> tags =
-                result.getFiducialResults();
-
-        telemetry.addData("Raw AprilTag count", tags.size());
-
-        List<Integer> ids = new ArrayList<>();
-        for (LLResultTypes.FiducialResult tag : tags) {
-            ids.add(tag.getFiducialId());
+        LLStatus status = limelight.getStatus();
+        if (status != null) {
+            telemetry.addData("FPS", status.getFps());
         }
 
-        telemetry.addData("Raw AprilTag IDs", ids);
-        telemetry.addData("AprilTags seen", getVisibleTagIds());
+        LLResult result = limelight.getLatestResult();
+        List<Integer> visibleIds = getVisibleTagIds(result);
+
+        if (visibleIds.isEmpty()) {
+            telemetry.addData("AprilTags seen", "None");
+        } else {
+            telemetry.addData("AprilTags seen", visibleIds);
+        }
     }
 }

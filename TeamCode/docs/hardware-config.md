@@ -56,7 +56,9 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
-| ___ | ___ | ___ | Waiting on build team |
+| ___ | ___ | ___ | Intake motor(s): waiting on build team |
+| `intake___Switch` | Digital Device | ___ / digital port ___ | goBILDA Micro Limit Switch (Bump Lever), **3103-0001-0002**: switch 1. Exact job TBD. Name it by that job, e.g. `intakeLoadedSwitch`. Check which reading (true/false) means "pressed" |
+| `intake___Switch` | Digital Device | ___ / digital port ___ | goBILDA Micro Limit Switch (Bump Lever), **3103-0001-0002**: switch 2. Same notes as switch 1 |
 
 ## Launcher (`subsystems/Launcher.java`, issue #5)
 
@@ -83,12 +85,3 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
 | `indicatorLight` | Servo | ___ / servo port ___ | goBILDA RGB Indicator Light. The "servo position" picks the color (see `Light.Color`) |
-
-## Not yet assigned (waiting on the build team)
-
-New hardware we have, but whose job isn't decided yet. Once it's decided, give each one a config name by its **job** (decision 009) and move it into that subsystem's table.
-
-| Config name | Device | Plugs into | Job | Notes |
-|---|---|---|---|---|
-| ___ | goBILDA Micro Limit Switch (Bump Lever), **3103-0001-0002** (2-pack): switch 1 | Digital port ___ | ___ | Configure as **Digital Device**. Check in a test which reading (true/false) means "pressed" |
-| ___ | goBILDA Micro Limit Switch (Bump Lever), **3103-0001-0002** (2-pack): switch 2 | Digital port ___ | ___ | Same as switch 1 |

@@ -12,7 +12,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
  * The turret servo is in CONTINUOUS mode (decision 021): the dpad sets a SPEED, and the encoder tells us the angle.
  *
  * Controls (gamepad 1), all after START:
- *   HOLD dpad left / right   turn the turret left / right. Hold a bumper too for SLOW moves
+ *   HOLD dpad left / right   turn the turret left / right
+ *     + hold RIGHT TRIGGER   FULL speed (only once homed; before that, everything is capped at NOT_HOMED_MAX_SPEED)
+ *     + hold a bumper        SLOW, fine moves
  *   Y                        set a MARK: "Since mark" counts from here. Use it to measure a move
  *   A                        turn to forward (0°)      } these use the encoder to aim,
  *   X / B                    turn to 45° left / right  } so they only work once HOMED
@@ -37,8 +39,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
 public class TurretTest extends LinearOpMode {
 
     // Dpad speeds (0 to 1). Before homing, Turret limits everything to NOT_HOMED_MAX_SPEED anyway.
-    static final double DPAD_SPEED = 0.4;
-    static final double DPAD_SLOW_SPEED = 0.1;
+    static final double DPAD_FULL_SPEED = 1.0;   // + right trigger
+    static final double DPAD_SPEED = 0.5;
+    static final double DPAD_SLOW_SPEED = 0.2;   // + bumper. Much lower and the Axon may not move at all
 
     @Override
     public void runOpMode() {
@@ -63,7 +66,12 @@ public class TurretTest extends LinearOpMode {
 
         while (opModeIsActive()) {
             // Dpad = manual speed. Letting go stops the turret.
-            double speed = (gamepad1.left_bumper || gamepad1.right_bumper) ? DPAD_SLOW_SPEED : DPAD_SPEED;
+            double speed = DPAD_SPEED;
+            if (gamepad1.right_trigger > 0.5) {
+                speed = DPAD_FULL_SPEED;
+            } else if (gamepad1.left_bumper || gamepad1.right_bumper) {
+                speed = DPAD_SLOW_SPEED;
+            }
             if (gamepad1.dpad_left) {
                 turret.setManualSpeed(speed);
                 dpadWasHeld = true;
@@ -91,7 +99,10 @@ public class TurretTest extends LinearOpMode {
             turret.update();
             showForward(turret, light);
 
-            telemetry.addLine("HOLD dpad = turn (+bumper = slow)   Y = mark   A = forward   X/B = 45° L/R");
+            telemetry.addLine("HOLD dpad = turn (+R trigger = FULL, +bumper = slow)   Y = mark   A = forward   X/B = 45° L/R");
+            if (!turret.isHomed()) {
+                telemetry.addData("Speed capped", "%.2f until homed: turn past forward once", Turret.NOT_HOMED_MAX_SPEED);
+            }
             telemetry.addLine();
             addReadings(turret, turretEncoder, markCounts);
             telemetry.update();

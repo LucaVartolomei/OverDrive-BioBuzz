@@ -61,3 +61,6 @@ Updated `subsystems/Camera.java` for issue #7 & Limelight AprilTag tracking: add
 
 10/14:
 Turret servo is now an **Axon MAX** (MK2) in continuous mode. Changed `Turret.SERVO_PWM_MIN_US/MAX_US` to Axon's continuous range, 1050–1950 µs, so speed 1.0 = full speed (with 500–2500, the Axon would hit full speed at about 0.45). No other code changes.
+
+10/15:
+Turret test on the Axon: it didn't move at first (servo plug was reversed), then it was very slow. Raised `Turret.NOT_HOMED_MAX_SPEED` from 0.15 to 0.35 (0.15 barely moves the Axon turret). Turret Test: hold the right trigger with the dpad for FULL speed (once homed); dpad speeds now 0.5 normal / 0.2 slow; shows when the speed is capped because the turret isn't homed yet.

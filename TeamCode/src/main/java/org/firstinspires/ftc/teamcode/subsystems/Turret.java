@@ -71,7 +71,8 @@ public class Turret {
     public static final double AIM_GAIN = 0.02;
     public static final double MAX_SPEED = 0.6;            // fastest the turret is allowed to turn (0 to 1)
     public static final double TOLERANCE_DEGREES = 1.0;    // "close enough" to the target: stop here
-    public static final double NOT_HOMED_MAX_SPEED = 0.15; // slow, for moving before the turret is homed
+    public static final double NOT_HOMED_MAX_SPEED = 0.35; // slower, for moving before the turret is homed
+                                                           // (0.15 was too slow to move the Axon turret, 10/15)
 
     // Safety: if the turret ends up this much FARTHER from the target than when it started,
     // something is backwards (step 1 or 2), so we stop instead of spinning away.

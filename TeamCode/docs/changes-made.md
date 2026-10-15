@@ -66,3 +66,4 @@ Turret servo is now an **Axon MAX** (MK2) in continuous mode. Changed `Turret.SE
 Turret test on the Axon: it didn't move at first (servo plug was reversed), then it was very slow. Raised `Turret.NOT_HOMED_MAX_SPEED` from 0.15 to 0.35 (0.15 barely moves the Axon turret). Turret Test: hold the right trigger with the dpad for FULL speed (once homed); dpad speeds now 0.5 normal / 0.2 slow; shows when the speed is capped because the turret isn't homed yet.
 Added "Turret Servo Raw Test": drives only the turret servo with the left stick (no homing, encoder or limits), to check the Axon on the bench in continuous mode.
 Recorded 2 goBILDA Micro Limit Switches (Bump Lever, 3103-0001-0002) in `hardware-config.md` under "Not yet assigned". Their job isn't decided yet, so no code or config names yet.
+The 2 goBILDA micro limit switches will be part of the **Intake** (#4). Moved them into the Intake table; names and exact job still to be decided.

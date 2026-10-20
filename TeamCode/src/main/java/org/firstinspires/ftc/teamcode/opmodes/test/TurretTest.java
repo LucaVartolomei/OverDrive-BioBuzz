@@ -41,7 +41,7 @@ public class TurretTest extends LinearOpMode {
     // Dpad speeds (0 to 1). Before homing, Turret limits everything to NOT_HOMED_MAX_SPEED anyway.
     static final double DPAD_FULL_SPEED = 1.0;   // + right trigger
     static final double DPAD_SPEED = 0.5;
-    static final double DPAD_SLOW_SPEED = 0.2;   // + bumper. Much lower and the Axon may not move at all
+    static final double DPAD_SLOW_SPEED = 0.2;   // + bumper. Much lower and the servo may not move the turret at all
 
     @Override
     public void runOpMode() {

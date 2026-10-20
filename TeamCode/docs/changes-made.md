@@ -67,3 +67,6 @@ Turret test on the Axon: it didn't move at first (servo plug was reversed), then
 Added "Turret Servo Raw Test": drives only the turret servo with the left stick (no homing, encoder or limits), to check the Axon on the bench in continuous mode.
 Recorded 2 goBILDA Micro Limit Switches (Bump Lever, 3103-0001-0002) in `hardware-config.md` under "Not yet assigned". Their job isn't decided yet, so no code or config names yet.
 The 2 goBILDA micro limit switches will be part of the **Intake** (#4). Moved them into the Intake table; names and exact job still to be decided.
+
+10/20:
+Turret servo is now a **goBILDA 2000 Series Dual Mode Servo, 25-3 Speed (2000-0025-0003)** in continuous mode. Changed `Turret.SERVO_PWM_MIN_US/MAX_US` to goBILDA's continuous range, 1000–2000 µs (was the Axon's 1050–1950). Turret Servo Raw Test uses the same constants.

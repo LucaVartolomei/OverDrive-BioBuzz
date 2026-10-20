@@ -22,8 +22,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
  *   - It keeps SPINNING as long as you hold the stick, and stops where it is when you let go
  *   - Faster the farther you push
  * If instead it moves a little, STOPS while you still hold, and goes BACK when you let go,
- * the servo is still in standard (positional) mode: reprogram it with the Axon Servo Programmer.
- * If it creeps when "Speed" is 0.00, recenter it in the Axon programmer.
+ * the servo is still in standard (positional) mode: reprogram it with its servo programmer (goBILDA or Axon).
+ * If it creeps when "Speed" is 0.00, recenter it with the servo programmer.
  */
 @TeleOp(name = "Turret Servo Raw Test", group = "Tests")
 public class TurretServoRawTest extends LinearOpMode {

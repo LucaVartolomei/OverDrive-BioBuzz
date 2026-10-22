@@ -22,7 +22,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
  *   X / B                    turn to 45° left / right  } so they only work once HOMED
  *   any dpad                 cancels A / X / B
  *
- * The light turns GREEN when the turret faces forward. The first time that happens, the encoder is HOMED.
+ * The first time the forward switch triggers, the encoder is HOMED (that spot = 0).
+ * The light turns GREEN whenever the turret is at HOME: at the switch, or within ±HOME_TOLERANCE_COUNTS of 0.
  * Until then, the turret only moves slowly.
  *
  * Calibrate IN ORDER (steps in issue #31). Don't try A / X / B until steps 1 and 2 are right!
@@ -118,9 +119,9 @@ public class TurretTest extends LinearOpMode {
         light.off();
     }
 
-    /** GREEN when the turret faces forward, OFF otherwise. The light is OK during INIT: it doesn't move anything. */
+    /** GREEN when the turret is at home, OFF otherwise. The light is OK during INIT: it doesn't move anything. */
     private void showForward(Turret turret, Light light) {
-        light.setColor(turret.isFacingForward() ? Light.Color.GREEN : Light.Color.OFF);
+        light.setColor(turret.isAtHome() ? Light.Color.GREEN : Light.Color.OFF);
     }
 
     private void addReadings(Turret turret, DcMotorEx turretEncoder, DigitalChannel forwardSwitch,
@@ -129,7 +130,7 @@ public class TurretTest extends LinearOpMode {
         int sinceMark = counts - markCounts;
 
         telemetry.addLine("--- Forward switch ---");
-        telemetry.addData("Facing forward", turret.isFacingForward() ? "YES (light GREEN)" : "no");
+        telemetry.addData("Forward switch (magnet)", turret.isFacingForward() ? "YES" : "no");
         telemetry.addData("Switch raw reading", "%b  (should FLIP when the magnet passes)", forwardSwitch.getState());
         telemetry.addLine("  Never flips? Try the other channel of that digital port (REV switch: usually the odd one, n+1).");
 

@@ -73,3 +73,4 @@ Turret servo is now a **goBILDA 2000 Series Dual Mode Servo, 25-3 Speed (2000-00
 
 10/22:
 Turret Servo Raw Test passed with the goBILDA 25-3 Speed servo (spins as expected). In Turret Test the turret moves but never homes, and Y seemed to do nothing. Added troubleshooting to Turret Test's screen: the forward switch's RAW reading (should flip at the magnet; try the other channel n/n+1 if not), hints when the encoder count doesn't change, and a "Mark set!" message when Y is pressed.
+The turret couldn't return to the exact magnet spot, so "home" is now a zone: `Turret.isAtHome()` is true at the switch or within `HOME_TOLERANCE_COUNTS` (200 encoder counts, = 18° of encoder turn) of the homed zero. Turret Test turns the light GREEN when at home and shows counts from home.

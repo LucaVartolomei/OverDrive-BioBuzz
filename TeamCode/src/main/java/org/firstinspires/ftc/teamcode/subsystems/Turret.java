@@ -82,6 +82,12 @@ public class Turret {
     // TODO(#31): check with "Turret Test". REV's switch reads false when a magnet is near (active low).
     public static final boolean FORWARD_SWITCH_TRIGGERED_STATE = false;
 
+    // "At home" zone: once homed, the turret counts as HOME (light GREEN) when the encoder is within
+    // this many counts of the homed zero. The magnet spot alone was too narrow to return to exactly.
+    // 200 counts = 18 degrees of ENCODER turn (4000 counts = 360). With gears, less at the turret.
+    // TODO(#31): tune. Smaller = stricter "home".
+    public static final int HOME_TOLERANCE_COUNTS = 200;
+
     private final CRServoImplEx turretServo;
     // Only used to READ the encoder port. We never give it power.
     private final DcMotorEx turretEncoder;
@@ -195,6 +201,20 @@ public class Turret {
         turretServo.setPower(0.0);
     }
 
+    /**
+     * True when the turret is at HOME (forward): the forward switch is triggered, or (once homed)
+     * the encoder is within HOME_TOLERANCE_COUNTS of the homed zero.
+     * The OpMode can show this on the light: light.setColor(GREEN) (decision 018).
+     */
+    public boolean isAtHome() {
+        return isFacingForward() || (homed && Math.abs(getCountsFromHome()) <= HOME_TOLERANCE_COUNTS);
+    }
+
+    /** Encoder counts away from the homed zero (+ or -). 0 until homed. */
+    public int getCountsFromHome() {
+        return homed ? getEncoderCounts() - homeCounts : 0;
+    }
+
     /** True once the encoder has been homed (the forward switch has triggered at least once). */
     public boolean isHomed() {
         return homed;
@@ -237,7 +257,7 @@ public class Turret {
 
     /**
      * True when the turret is facing forward (the magnet is at the switch).
-     * The OpMode can show this on the light: light.setColor(GREEN) (decision 018).
+     * This is the exact magnet spot. For the light, use isAtHome() (a wider zone).
      */
     public boolean isFacingForward() {
         return turretForwardSwitch.getState() == FORWARD_SWITCH_TRIGGERED_STATE;
@@ -250,6 +270,8 @@ public class Turret {
     /** Show this subsystem's status on the Driver Station. */
     public void addTelemetry(Telemetry telemetry) {
         telemetry.addData("Turret homed", homed ? "yes" : "NO: turn the turret to forward once (slow until then)");
+        telemetry.addData("Turret at home", "%s  (%d counts from home, zone ±%d)",
+                isAtHome() ? "YES" : "no", getCountsFromHome(), HOME_TOLERANCE_COUNTS);
         telemetry.addData("Turret angle (°)  +left", homed ? String.format("%.1f", getAngle()) : "unknown");
         telemetry.addData("Turret target (°)", Double.isNaN(targetDegrees) ? "none (manual)" : String.format("%.1f", targetDegrees));
         telemetry.addData("Turret speed sent", "%.2f  (+ = left)", speedSent);

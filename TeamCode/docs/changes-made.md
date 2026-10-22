@@ -70,3 +70,6 @@ The 2 goBILDA micro limit switches will be part of the **Intake** (#4). Moved th
 
 10/20:
 Turret servo is now a **goBILDA 2000 Series Dual Mode Servo, 25-3 Speed (2000-0025-0003)** in continuous mode. Changed `Turret.SERVO_PWM_MIN_US/MAX_US` to goBILDA's continuous range, 1000–2000 µs (was the Axon's 1050–1950). Turret Servo Raw Test uses the same constants.
+
+10/22:
+Turret Servo Raw Test passed with the goBILDA 25-3 Speed servo (spins as expected). In Turret Test the turret moves but never homes, and Y seemed to do nothing. Added troubleshooting to Turret Test's screen: the forward switch's RAW reading (should flip at the magnet; try the other channel n/n+1 if not), hints when the encoder count doesn't change, and a "Mark set!" message when Y is pressed.

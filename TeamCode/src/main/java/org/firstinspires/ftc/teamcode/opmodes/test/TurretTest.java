@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.opmodes.test;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.Light;
 import org.firstinspires.ftc.teamcode.subsystems.Turret;
@@ -49,6 +51,9 @@ public class TurretTest extends LinearOpMode {
         Light light = new Light(hardwareMap);
         // Test-only: the same encoder, used directly to show its speed (code-structure rule 8).
         DcMotorEx turretEncoder = hardwareMap.get(DcMotorEx.class, Turret.ENCODER_NAME);
+        // Test-only: the same switch, to show its RAW reading (code-structure rule 8).
+        DigitalChannel forwardSwitch = hardwareMap.get(DigitalChannel.class, Turret.FORWARD_SWITCH_NAME);
+        ElapsedTime sinceMarkSet = new ElapsedTime(1000); // starts "long ago", so no message at first
 
         int markCounts = turret.getEncoderCounts();
         boolean dpadWasHeld = false;
@@ -60,7 +65,7 @@ public class TurretTest extends LinearOpMode {
             telemetry.addLine("Press START. Nothing moves until you press a button.");
             telemetry.addLine("Don't force the turret by hand: the servo's gears can strip.");
             telemetry.addLine();
-            addReadings(turret, turretEncoder, markCounts);
+            addReadings(turret, turretEncoder, forwardSwitch, markCounts, sinceMarkSet);
             telemetry.update();
         }
 
@@ -85,6 +90,7 @@ public class TurretTest extends LinearOpMode {
 
             if (gamepad1.yWasPressed()) {
                 markCounts = turret.getEncoderCounts();
+                sinceMarkSet.reset();
             }
             if (gamepad1.aWasPressed()) {
                 turret.turnForward();
@@ -104,7 +110,7 @@ public class TurretTest extends LinearOpMode {
                 telemetry.addData("Speed capped", "%.2f until homed: turn past forward once", Turret.NOT_HOMED_MAX_SPEED);
             }
             telemetry.addLine();
-            addReadings(turret, turretEncoder, markCounts);
+            addReadings(turret, turretEncoder, forwardSwitch, markCounts, sinceMarkSet);
             telemetry.update();
         }
 
@@ -117,12 +123,15 @@ public class TurretTest extends LinearOpMode {
         light.setColor(turret.isFacingForward() ? Light.Color.GREEN : Light.Color.OFF);
     }
 
-    private void addReadings(Turret turret, DcMotorEx turretEncoder, int markCounts) {
+    private void addReadings(Turret turret, DcMotorEx turretEncoder, DigitalChannel forwardSwitch,
+                             int markCounts, ElapsedTime sinceMarkSet) {
         int counts = turret.getEncoderCounts();
         int sinceMark = counts - markCounts;
 
         telemetry.addLine("--- Forward switch ---");
         telemetry.addData("Facing forward", turret.isFacingForward() ? "YES (light GREEN)" : "no");
+        telemetry.addData("Switch raw reading", "%b  (should FLIP when the magnet passes)", forwardSwitch.getState());
+        telemetry.addLine("  Never flips? Try the other channel of that digital port (REV switch: usually the odd one, n+1).");
 
         telemetry.addLine("--- Turret ---");
         turret.addTelemetry(telemetry);
@@ -132,6 +141,11 @@ public class TurretTest extends LinearOpMode {
 
         telemetry.addLine("--- ELC encoder (on the servo) ---");
         telemetry.addData("Raw counts", "%d  (0 at power-on)", counts);
+        telemetry.addLine("  Doesn't change while turning? Check the ELC \"D\" cable is in the Expansion Hub ENCODER port");
+        telemetry.addLine("  that matches turretEncoder's motor port number in the config.");
+        if (sinceMarkSet.seconds() < 2) {
+            telemetry.addLine("  ✅ Mark set! \"Since mark\" now counts from here.");
+        }
         telemetry.addData("Since mark (Y)", "%d counts = %.1f° of encoder turn",
                 sinceMark, sinceMark / Turret.ENCODER_COUNTS_PER_REV * 360.0);
         telemetry.addData("Encoder turns", "%.3f  (%.0f counts = 1 turn)",

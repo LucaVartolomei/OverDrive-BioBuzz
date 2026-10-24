@@ -59,6 +59,25 @@ Turret Test showed the positional servo only turns the turret a little each way.
 10/14:
 Updated `subsystems/Camera.java` for issue #7 & Limelight AprilTag tracking: added BIOBUZZ Cell Tag ID ranges (30-45), alliance tag helper methods, horizontal/vertical angle offsets (`getTargetDegreesLeft()`, `getTargetDegreesUp()`), and target area telemetry. Camera has already been configured in limelight localhost.
 
+10/14:
+Updated `subsystems/Camera.java` for issue #7 & Limelight AprilTag tracking: added BIOBUZZ Cell Tag ID ranges (30-45), alliance tag helper methods, horizontal/vertical angle offsets (`getTargetDegreesLeft()`, `getTargetDegreesUp()`), and target area telemetry. Camera has already been configured in limelight localhost.
+
+10/14:
+Turret servo is now an **Axon MAX** (MK2) in continuous mode. Changed `Turret.SERVO_PWM_MIN_US/MAX_US` to Axon's continuous range, 1050–1950 µs, so speed 1.0 = full speed (with 500–2500, the Axon would hit full speed at about 0.45). No other code changes.
+
+10/15:
+Turret test on the Axon: it didn't move at first (servo plug was reversed), then it was very slow. Raised `Turret.NOT_HOMED_MAX_SPEED` from 0.15 to 0.35 (0.15 barely moves the Axon turret). Turret Test: hold the right trigger with the dpad for FULL speed (once homed); dpad speeds now 0.5 normal / 0.2 slow; shows when the speed is capped because the turret isn't homed yet.
+Added "Turret Servo Raw Test": drives only the turret servo with the left stick (no homing, encoder or limits), to check the Axon on the bench in continuous mode.
+Recorded 2 goBILDA Micro Limit Switches (Bump Lever, 3103-0001-0002) in `hardware-config.md` under "Not yet assigned". Their job isn't decided yet, so no code or config names yet.
+The 2 goBILDA micro limit switches will be part of the **Intake** (#4). Moved them into the Intake table; names and exact job still to be decided.
+
+10/20:
+Turret servo is now a **goBILDA 2000 Series Dual Mode Servo, 25-3 Speed (2000-0025-0003)** in continuous mode. Changed `Turret.SERVO_PWM_MIN_US/MAX_US` to goBILDA's continuous range, 1000–2000 µs (was the Axon's 1050–1950). Turret Servo Raw Test uses the same constants.
+
+10/22:
+Turret Servo Raw Test passed with the goBILDA 25-3 Speed servo (spins as expected). In Turret Test the turret moves but never homes, and Y seemed to do nothing. Added troubleshooting to Turret Test's screen: the forward switch's RAW reading (should flip at the magnet; try the other channel n/n+1 if not), hints when the encoder count doesn't change, and a "Mark set!" message when Y is pressed.
+The turret couldn't return to the exact magnet spot, so "home" is now a zone: `Turret.isAtHome()` is true at the switch or within `HOME_TOLERANCE_COUNTS` (200 encoder counts, = 18° of encoder turn) of the homed zero. Turret Test turns the light GREEN when at home and shows counts from home.
+
 10/24:
 Bench bot set up from last year's chassis: 4 goBILDA mecanum drive motors, Control Hub + Expansion Hub, Limelight 3A (USB 3.0), goBILDA RGB light, new Driver Hub paired. Camera Test, Light Test and manualDriver all confirmed working.
 Filled in the ports in `hardware-config.md`: left drive motors on Control Hub 0/1, right on Expansion Hub 0/1 (to be moved to Control Hub 2/3), light on Control Hub servo 0. Added the cable part numbers (bullet-to-VH motor adaptor, 3-pin RS485 cable, XT30 extension).

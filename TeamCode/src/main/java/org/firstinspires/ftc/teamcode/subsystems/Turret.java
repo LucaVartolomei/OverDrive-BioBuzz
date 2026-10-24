@@ -15,8 +15,8 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
  *
  * Hardware:
  *   turretServo          CONTINUOUS ROTATION servo (decision 021). We tell it a SPEED (-1 to +1), not a position.
- *                        For now (temporary): goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (2000-0025-0002),
- *                        switched to continuous mode with the goBILDA Servo Programmer.
+ *                        goBILDA 2000 Series Dual Mode Servo, 25-3 Speed (2000-0025-0003), set to CONTINUOUS
+ *                        mode with the goBILDA Servo Programmer.
  *                        Driver Station config type: "Continuous Rotation Servo".
  *   turretEncoder        ELC Encoder V2, "D" (quadrature) connector, on an Expansion Hub MOTOR ENCODER port
  *                        (decision 019). This is how the turret knows where it is.
@@ -45,9 +45,11 @@ public class Turret {
     public static final String ENCODER_NAME = "turretEncoder";
     public static final String FORWARD_SWITCH_NAME = "turretForwardSwitch";
 
-    // The servo's signal range in microseconds (goBILDA 2000 series: 500-2500). Check this if we change servos.
-    public static final double SERVO_PWM_MIN_US = 500;
-    public static final double SERVO_PWM_MAX_US = 2500;
+    // The servo's signal range in microseconds, in CONTINUOUS mode. goBILDA 2000 series: 1000-2000.
+    // 1500 = stop, 1000 = full speed one way, 2000 = full speed the other way. With this range,
+    // a speed of 1.0 really is full speed. CHECK THIS IF WE CHANGE SERVOS (Axon MAX used 1050-1950).
+    public static final double SERVO_PWM_MIN_US = 1000;
+    public static final double SERVO_PWM_MAX_US = 2000;
 
     // TODO(#31) step 1: set to true if a POSITIVE speed turns the turret RIGHT (it should turn LEFT).
     public static final boolean SERVO_REVERSED = false;
@@ -70,7 +72,8 @@ public class Turret {
     public static final double AIM_GAIN = 0.02;
     public static final double MAX_SPEED = 0.6;            // fastest the turret is allowed to turn (0 to 1)
     public static final double TOLERANCE_DEGREES = 1.0;    // "close enough" to the target: stop here
-    public static final double NOT_HOMED_MAX_SPEED = 0.15; // slow, for moving before the turret is homed
+    public static final double NOT_HOMED_MAX_SPEED = 0.35; // slower, for moving before the turret is homed
+                                                           // (0.15 was too slow to move the Axon turret, 10/15)
 
     // Safety: if the turret ends up this much FARTHER from the target than when it started,
     // something is backwards (step 1 or 2), so we stop instead of spinning away.
@@ -78,6 +81,12 @@ public class Turret {
 
     // TODO(#31): check with "Turret Test". REV's switch reads false when a magnet is near (active low).
     public static final boolean FORWARD_SWITCH_TRIGGERED_STATE = false;
+
+    // "At home" zone: once homed, the turret counts as HOME (light GREEN) when the encoder is within
+    // this many counts of the homed zero. The magnet spot alone was too narrow to return to exactly.
+    // 200 counts = 18 degrees of ENCODER turn (4000 counts = 360). With gears, less at the turret.
+    // TODO(#31): tune. Smaller = stricter "home".
+    public static final int HOME_TOLERANCE_COUNTS = 200;
 
     private final CRServoImplEx turretServo;
     // Only used to READ the encoder port. We never give it power.
@@ -192,6 +201,20 @@ public class Turret {
         turretServo.setPower(0.0);
     }
 
+    /**
+     * True when the turret is at HOME (forward): the forward switch is triggered, or (once homed)
+     * the encoder is within HOME_TOLERANCE_COUNTS of the homed zero.
+     * The OpMode can show this on the light: light.setColor(GREEN) (decision 018).
+     */
+    public boolean isAtHome() {
+        return isFacingForward() || (homed && Math.abs(getCountsFromHome()) <= HOME_TOLERANCE_COUNTS);
+    }
+
+    /** Encoder counts away from the homed zero (+ or -). 0 until homed. */
+    public int getCountsFromHome() {
+        return homed ? getEncoderCounts() - homeCounts : 0;
+    }
+
     /** True once the encoder has been homed (the forward switch has triggered at least once). */
     public boolean isHomed() {
         return homed;
@@ -234,7 +257,7 @@ public class Turret {
 
     /**
      * True when the turret is facing forward (the magnet is at the switch).
-     * The OpMode can show this on the light: light.setColor(GREEN) (decision 018).
+     * This is the exact magnet spot. For the light, use isAtHome() (a wider zone).
      */
     public boolean isFacingForward() {
         return turretForwardSwitch.getState() == FORWARD_SWITCH_TRIGGERED_STATE;
@@ -247,6 +270,8 @@ public class Turret {
     /** Show this subsystem's status on the Driver Station. */
     public void addTelemetry(Telemetry telemetry) {
         telemetry.addData("Turret homed", homed ? "yes" : "NO: turn the turret to forward once (slow until then)");
+        telemetry.addData("Turret at home", "%s  (%d counts from home, zone ±%d)",
+                isAtHome() ? "YES" : "no", getCountsFromHome(), HOME_TOLERANCE_COUNTS);
         telemetry.addData("Turret angle (°)  +left", homed ? String.format("%.1f", getAngle()) : "unknown");
         telemetry.addData("Turret target (°)", Double.isNaN(targetDegrees) ? "none (manual)" : String.format("%.1f", targetDegrees));
         telemetry.addData("Turret speed sent", "%.2f  (+ = left)", speedSent);

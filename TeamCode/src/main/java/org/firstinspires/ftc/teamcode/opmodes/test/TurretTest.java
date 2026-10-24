@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.opmodes.test;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.Light;
 import org.firstinspires.ftc.teamcode.subsystems.Turret;
@@ -12,13 +14,16 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
  * The turret servo is in CONTINUOUS mode (decision 021): the dpad sets a SPEED, and the encoder tells us the angle.
  *
  * Controls (gamepad 1), all after START:
- *   HOLD dpad left / right   turn the turret left / right. Hold a bumper too for SLOW moves
+ *   HOLD dpad left / right   turn the turret left / right
+ *     + hold RIGHT TRIGGER   FULL speed (only once homed; before that, everything is capped at NOT_HOMED_MAX_SPEED)
+ *     + hold a bumper        SLOW, fine moves
  *   Y                        set a MARK: "Since mark" counts from here. Use it to measure a move
  *   A                        turn to forward (0°)      } these use the encoder to aim,
  *   X / B                    turn to 45° left / right  } so they only work once HOMED
  *   any dpad                 cancels A / X / B
  *
- * The light turns GREEN when the turret faces forward. The first time that happens, the encoder is HOMED.
+ * The first time the forward switch triggers, the encoder is HOMED (that spot = 0).
+ * The light turns GREEN whenever the turret is at HOME: at the switch, or within ±HOME_TOLERANCE_COUNTS of 0.
  * Until then, the turret only moves slowly.
  *
  * Calibrate IN ORDER (steps in issue #31). Don't try A / X / B until steps 1 and 2 are right!
@@ -37,8 +42,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
 public class TurretTest extends LinearOpMode {
 
     // Dpad speeds (0 to 1). Before homing, Turret limits everything to NOT_HOMED_MAX_SPEED anyway.
-    static final double DPAD_SPEED = 0.4;
-    static final double DPAD_SLOW_SPEED = 0.1;
+    static final double DPAD_FULL_SPEED = 1.0;   // + right trigger
+    static final double DPAD_SPEED = 0.5;
+    static final double DPAD_SLOW_SPEED = 0.2;   // + bumper. Much lower and the servo may not move the turret at all
 
     @Override
     public void runOpMode() {
@@ -46,6 +52,9 @@ public class TurretTest extends LinearOpMode {
         Light light = new Light(hardwareMap);
         // Test-only: the same encoder, used directly to show its speed (code-structure rule 8).
         DcMotorEx turretEncoder = hardwareMap.get(DcMotorEx.class, Turret.ENCODER_NAME);
+        // Test-only: the same switch, to show its RAW reading (code-structure rule 8).
+        DigitalChannel forwardSwitch = hardwareMap.get(DigitalChannel.class, Turret.FORWARD_SWITCH_NAME);
+        ElapsedTime sinceMarkSet = new ElapsedTime(1000); // starts "long ago", so no message at first
 
         int markCounts = turret.getEncoderCounts();
         boolean dpadWasHeld = false;
@@ -57,13 +66,18 @@ public class TurretTest extends LinearOpMode {
             telemetry.addLine("Press START. Nothing moves until you press a button.");
             telemetry.addLine("Don't force the turret by hand: the servo's gears can strip.");
             telemetry.addLine();
-            addReadings(turret, turretEncoder, markCounts);
+            addReadings(turret, turretEncoder, forwardSwitch, markCounts, sinceMarkSet);
             telemetry.update();
         }
 
         while (opModeIsActive()) {
             // Dpad = manual speed. Letting go stops the turret.
-            double speed = (gamepad1.left_bumper || gamepad1.right_bumper) ? DPAD_SLOW_SPEED : DPAD_SPEED;
+            double speed = DPAD_SPEED;
+            if (gamepad1.right_trigger > 0.5) {
+                speed = DPAD_FULL_SPEED;
+            } else if (gamepad1.left_bumper || gamepad1.right_bumper) {
+                speed = DPAD_SLOW_SPEED;
+            }
             if (gamepad1.dpad_left) {
                 turret.setManualSpeed(speed);
                 dpadWasHeld = true;
@@ -77,6 +91,7 @@ public class TurretTest extends LinearOpMode {
 
             if (gamepad1.yWasPressed()) {
                 markCounts = turret.getEncoderCounts();
+                sinceMarkSet.reset();
             }
             if (gamepad1.aWasPressed()) {
                 turret.turnForward();
@@ -91,9 +106,12 @@ public class TurretTest extends LinearOpMode {
             turret.update();
             showForward(turret, light);
 
-            telemetry.addLine("HOLD dpad = turn (+bumper = slow)   Y = mark   A = forward   X/B = 45° L/R");
+            telemetry.addLine("HOLD dpad = turn (+R trigger = FULL, +bumper = slow)   Y = mark   A = forward   X/B = 45° L/R");
+            if (!turret.isHomed()) {
+                telemetry.addData("Speed capped", "%.2f until homed: turn past forward once", Turret.NOT_HOMED_MAX_SPEED);
+            }
             telemetry.addLine();
-            addReadings(turret, turretEncoder, markCounts);
+            addReadings(turret, turretEncoder, forwardSwitch, markCounts, sinceMarkSet);
             telemetry.update();
         }
 
@@ -101,17 +119,20 @@ public class TurretTest extends LinearOpMode {
         light.off();
     }
 
-    /** GREEN when the turret faces forward, OFF otherwise. The light is OK during INIT: it doesn't move anything. */
+    /** GREEN when the turret is at home, OFF otherwise. The light is OK during INIT: it doesn't move anything. */
     private void showForward(Turret turret, Light light) {
-        light.setColor(turret.isFacingForward() ? Light.Color.GREEN : Light.Color.OFF);
+        light.setColor(turret.isAtHome() ? Light.Color.GREEN : Light.Color.OFF);
     }
 
-    private void addReadings(Turret turret, DcMotorEx turretEncoder, int markCounts) {
+    private void addReadings(Turret turret, DcMotorEx turretEncoder, DigitalChannel forwardSwitch,
+                             int markCounts, ElapsedTime sinceMarkSet) {
         int counts = turret.getEncoderCounts();
         int sinceMark = counts - markCounts;
 
         telemetry.addLine("--- Forward switch ---");
-        telemetry.addData("Facing forward", turret.isFacingForward() ? "YES (light GREEN)" : "no");
+        telemetry.addData("Forward switch (magnet)", turret.isFacingForward() ? "YES" : "no");
+        telemetry.addData("Switch raw reading", "%b  (should FLIP when the magnet passes)", forwardSwitch.getState());
+        telemetry.addLine("  Never flips? Try the other channel of that digital port (REV switch: usually the odd one, n+1).");
 
         telemetry.addLine("--- Turret ---");
         turret.addTelemetry(telemetry);
@@ -121,6 +142,11 @@ public class TurretTest extends LinearOpMode {
 
         telemetry.addLine("--- ELC encoder (on the servo) ---");
         telemetry.addData("Raw counts", "%d  (0 at power-on)", counts);
+        telemetry.addLine("  Doesn't change while turning? Check the ELC \"D\" cable is in the Expansion Hub ENCODER port");
+        telemetry.addLine("  that matches turretEncoder's motor port number in the config.");
+        if (sinceMarkSet.seconds() < 2) {
+            telemetry.addLine("  ✅ Mark set! \"Since mark\" now counts from here.");
+        }
         telemetry.addData("Since mark (Y)", "%d counts = %.1f° of encoder turn",
                 sinceMark, sinceMark / Turret.ENCODER_COUNTS_PER_REV * 360.0);
         telemetry.addData("Encoder turns", "%.3f  (%.0f counts = 1 turn)",

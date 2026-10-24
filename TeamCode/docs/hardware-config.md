@@ -60,7 +60,9 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
-| ___ | ___ | ___ | Waiting on build team |
+| ___ | ___ | ___ | Intake motor(s): waiting on build team |
+| `intake___Switch` | Digital Device | ___ / digital port ___ | goBILDA Micro Limit Switch (Bump Lever), **3103-0001-0002**: switch 1. Exact job TBD. Name it by that job, e.g. `intakeLoadedSwitch`. Check which reading (true/false) means "pressed" |
+| `intake___Switch` | Digital Device | ___ / digital port ___ | goBILDA Micro Limit Switch (Bump Lever), **3103-0001-0002**: switch 2. Same notes as switch 1 |
 
 ## Launcher (`subsystems/Launcher.java`, issue #5)
 
@@ -78,7 +80,7 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
-| `turretServo` | **Continuous Rotation Servo** | ___ / servo port ___ | **Temporary:** goBILDA 2000 Series Dual Mode Servo, 25-2 Torque (**2000-0025-0002**), switched to **continuous mode** with the goBILDA Servo Programmer (decision 021). Code sets its signal range to 500–2500 µs. Will be upgraded later: recheck `Turret.java` constants then |
+| `turretServo` | **Continuous Rotation Servo** | ___ / servo port ___ | **goBILDA 2000 Series Dual Mode Servo, 25-3 Speed (2000-0025-0003)**, set to **continuous mode** with the goBILDA Servo Programmer (decision 021). Code sets its signal range to **1000–2000 µs** (goBILDA's continuous range). History: goBILDA 25-2 Torque → Axon MAX (10/14) → this (10/20) |
 | `turretEncoder` | Motor (encoder only, never powered) | **Expansion Hub** / motor-encoder port ___ | ELC Encoder V2, **quadrature** output (decision 019): use the encoder's **"D" connector** (not "A" = analog). Configure the motor port with this name; the code only reads its encoder. Data sheet: 3.3–3.6 V (the hub's encoder port gives 3.3 V ✅), JST-PH 4-pin (same as the hub ✅), 4000 counts per revolution. ⚠️ Pin order isn't on the data sheet: use the cable that came with it and check "Encoder counts" changes when you turn it |
 | `turretForwardSwitch` | Digital Device | ___ / digital port ___ | REV Magnetic Limit Switch: triggers when the turret faces **forward** (indicator, not a stop, decision 017). Digital ports have 2 channels (n, n+1): if it never changes, try the other channel number |
 

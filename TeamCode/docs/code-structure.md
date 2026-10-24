@@ -28,6 +28,7 @@ teamcode/
         ├── LightTest.java ← check the light's colors
         ├── PinpointTest.java
         ├── TestDriveMotors.java ← test-only helper; never used by real robot code
+        ├── TurretServoRawTest.java ← the turret servo ALONE: joystick speed, no homing/limits (#31)
         └── TurretTest.java ← turn the (continuous) turret with the dpad, learn the ELC encoder, calibrate (#31)
 ```
 

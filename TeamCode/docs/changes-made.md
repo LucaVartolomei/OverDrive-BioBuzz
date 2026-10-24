@@ -58,3 +58,7 @@ Turret Test showed the positional servo only turns the turret a little each way.
 
 10/14:
 Updated `subsystems/Camera.java` for issue #7 & Limelight AprilTag tracking: added BIOBUZZ Cell Tag ID ranges (30-45), alliance tag helper methods, horizontal/vertical angle offsets (`getTargetDegreesLeft()`, `getTargetDegreesUp()`), and target area telemetry. Camera has already been configured in limelight localhost.
+
+10/24:
+Bench bot set up from last year's chassis: 4 goBILDA mecanum drive motors, Control Hub + Expansion Hub, Limelight 3A (USB 3.0), goBILDA RGB light, new Driver Hub paired. Camera Test, Light Test and manualDriver all confirmed working.
+Filled in the ports in `hardware-config.md`: left drive motors on Control Hub 0/1, right on Expansion Hub 0/1 (to be moved to Control Hub 2/3), light on Control Hub servo 0. Added the cable part numbers (bullet-to-VH motor adaptor, 3-pin RS485 cable, XT30 extension).

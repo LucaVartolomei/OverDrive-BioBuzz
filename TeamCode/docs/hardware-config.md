@@ -20,23 +20,27 @@ If a name doesn't match, the OpMode crashes on INIT with an error like `Unable t
 
 ## Drivetrain (`subsystems/Drivetrain.java`)
 
-| Config name | Device type | Hub / Port | Direction | Notes |
-|---|---|---|---|---|
-| `frontLeftDrive`  | Motor | Control Hub / motor __ | REVERSE | Left side reversed (tested 9/23) |
-| `backLeftDrive`   | Motor | Control Hub / motor __ | REVERSE | |
-| `frontRightDrive` | Motor | Control Hub / motor __ | FORWARD | |
-| `backRightDrive`  | Motor | Control Hub / motor __ | FORWARD | |
+| Config name | Device type | Hub / Port | Direction | Notes                     |
+|---|---|---|---|---------------------------|
+| `frontLeftDrive`  | Motor | Control Hub / motor 0 | REVERSE | Left side reversed (tested 9/23) |
+| `backLeftDrive`   | Motor | Control Hub / motor 1 | REVERSE |                           |
+| `frontRightDrive` | Motor | Expansion Hub / motor 0 | FORWARD | Bench bot (10/24)     |
+| `backRightDrive`  | Motor | Expansion Hub / motor 1 | FORWARD | Bench bot (10/24) |
+
+Randy suggests keeping 2 motors per hub (left on control hub, and right on expansion hub) since the hubs have current limits, so this is just to be safe. 
+Motor cabling (goBILDA): the motor has **3.5 mm bullet** power plugs → goBILDA adaptor **3801-0613-0100** (2-Pos JST VH to 3.5 mm bullet) → hub motor port.
+Bullets aren't keyed: red to red, black to black, or the motor spins backwards. Encoder: 4-pin JST PH on the hub, black 4-pin 0.1" (TJC8) housing on the motor.
 
 ⚠️ **Set the correct motor type** for each drive motor in the Driver Station config (the exact goBILDA model / gear ratio, not a generic type).
 In encoder speed control mode (`RUN_USING_ENCODER`, decision 008), the SDK uses the configured motor type to know the motor's top speed.
-A wrong type can make the robot much slower. Drive motor model / ratio: ______
+A wrong type can make the robot much slower. Drive motor model / ratio: TBA
 
 ## Hubs
 
 | Hub | Notes |
 |---|---|
-| Control Hub | Drive motors (all 4 motor ports), Limelight (USB 3.0), Pinpoint (I2C) |
-| Expansion Hub | Flywheel and intake motors (#5, #4), `turretEncoder` (motor-encoder port, decision 019). Connected by: ___ (RS485 cable) |
+| Control Hub | Drive motors (all 4 motor ports, planned; bench bot has the left side only), Limelight (USB 3.0), Pinpoint (I2C), `indicatorLight` (servo 0) |
+| Expansion Hub | Flywheel and intake motors (#5, #4), `turretEncoder` (motor-encoder port, decision 019). Bench bot (10/24): right drive motors on motors 0 and 1. Connected by: REV JST PH **3-pin** Communication Cable (RS485 → RS485, REV-31-1417) + XT30 Extension Cable for power (REV-31-1392). Without the 3-pin cable the hub has power (LED blinks blue) but the Driver Station can't find its devices |
 
 Each motor port has a matching **encoder port** with the same number. Ports on the Expansion Hub count from 0 again.
 
@@ -82,4 +86,4 @@ Each motor port has a matching **encoder port** with the same number. Ports on t
 
 | Config name | Device type | Hub / Port | Notes |
 |---|---|---|---|
-| `indicatorLight` | Servo | ___ / servo port ___ | goBILDA RGB Indicator Light. The "servo position" picks the color (see `Light.Color`) |
+| `indicatorLight` | Servo | Control Hub / servo port 0 | goBILDA RGB Indicator Light (3-pin servo plug; black wire toward the hub's ground mark). The "servo position" picks the color (see `Light.Color`). Tested 10/24 |

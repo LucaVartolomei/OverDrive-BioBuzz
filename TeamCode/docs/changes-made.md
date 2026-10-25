@@ -81,3 +81,6 @@ The turret couldn't return to the exact magnet spot, so "home" is now a zone: `T
 10/24:
 Bench bot set up from last year's chassis: 4 goBILDA mecanum drive motors, Control Hub + Expansion Hub, Limelight 3A (USB 3.0), goBILDA RGB light, new Driver Hub paired. Camera Test, Light Test and manualDriver all confirmed working.
 Filled in the ports in `hardware-config.md`: left drive motors on Control Hub 0/1, right on Expansion Hub 0/1 (to be moved to Control Hub 2/3), light on Control Hub servo 0. Added the cable part numbers (bullet-to-VH motor adaptor, 3-pin RS485 cable, XT30 extension).
+
+10/25:
+Added a printable worksheet for the brake mode experiment (#17): `TeamCode/docs/worksheets/brake-mode-experiment.pdf` (4 pages: background + predictions, Parts A and B, Part C, results + team decision). Made by `make_brake_mode_worksheet.py` in the same folder (`pip install reportlab`, then run it) so it can be edited and re-printed.

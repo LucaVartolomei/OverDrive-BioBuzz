@@ -1,6 +1,4 @@
-package com.overdrive.oracleftc.commands.helpers;
-
-import com.overdrive.oracleftc.commands.Command;
+package com.overdrive.oracleftc.commands;
 
 @SuppressWarnings("unused")
 public class InstantCommand extends Command {

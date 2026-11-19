@@ -1,4 +1,4 @@
-package com.overdrive.oracleftc.hardware;
+package com.overdrive.oracleftc.hardware.subsystem;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.HardwareMap;

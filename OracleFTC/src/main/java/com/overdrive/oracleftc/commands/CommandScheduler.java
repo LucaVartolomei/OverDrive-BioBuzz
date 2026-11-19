@@ -1,7 +1,7 @@
 package com.overdrive.oracleftc.commands;
 
-import com.overdrive.oracleftc.hardware.Subsystem;
-import com.overdrive.oracleftc.hardware.SubsystemFlavor;
+import com.overdrive.oracleftc.hardware.subsystem.Subsystem;
+import com.overdrive.oracleftc.hardware.subsystem.SubsystemFlavor;
 
 import java.util.ArrayList;
 import java.util.HashSet;

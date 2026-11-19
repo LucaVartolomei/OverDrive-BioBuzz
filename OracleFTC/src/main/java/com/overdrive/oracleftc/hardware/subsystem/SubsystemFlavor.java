@@ -1,4 +1,4 @@
-package com.overdrive.oracleftc.hardware;
+package com.overdrive.oracleftc.hardware.subsystem;
 
 public enum SubsystemFlavor {
     ControlHubOnly,

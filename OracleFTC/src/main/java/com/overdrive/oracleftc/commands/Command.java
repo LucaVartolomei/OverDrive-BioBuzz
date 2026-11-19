@@ -1,6 +1,6 @@
 package com.overdrive.oracleftc.commands;
 
-import com.overdrive.oracleftc.hardware.Subsystem;
+import com.overdrive.oracleftc.hardware.subsystem.Subsystem;
 
 import java.util.HashSet;
 import java.util.Set;

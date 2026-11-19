@@ -1,7 +1,6 @@
-package com.overdrive.oracleftc.commands.helpers;
+package com.overdrive.oracleftc.commands;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.overdrive.oracleftc.commands.Command;
 
 import java.util.function.BooleanSupplier;
 @SuppressWarnings("unused")

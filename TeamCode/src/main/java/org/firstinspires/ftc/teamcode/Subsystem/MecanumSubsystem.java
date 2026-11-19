@@ -1,21 +1,19 @@
 package org.firstinspires.ftc.teamcode.Subsystem;
 
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
 import com.overdrive.oracleftc.commands.Command;
 import com.overdrive.oracleftc.hardware.OracleLynxVoltageSensor;
+import com.overdrive.oracleftc.hardware.subsystem.Subsystem;
 import com.overdrive.oracleftc.utils.input.OracleGamepad;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.ImuOrientationOnRobot;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-public class MecanumSubsystem {
+public class MecanumSubsystem extends Subsystem {
     private final DcMotorEx frontLeft, frontRight, backLeft, backRight;
     private final OracleLynxVoltageSensor voltageSensor;
     private final IMU imu;

@@ -1,7 +1,8 @@
-package org.firstinspires.ftc.teamcode.Subsystem;
+package org.firstinspires.ftc.teamcode.subsystem;
 
 import com.overdrive.oracleftc.commands.Command;
 import com.overdrive.oracleftc.commands.InstantCommand;
+import com.overdrive.oracleftc.commands.SequentialCommand;
 import com.overdrive.oracleftc.hardware.OracleLynxVoltageSensor;
 import com.overdrive.oracleftc.hardware.subsystem.ServoActuator;
 import com.overdrive.oracleftc.hardware.subsystem.Subsystem;
@@ -97,11 +98,9 @@ public class IntakeSubsystem extends Subsystem {
         feeder.setPower((12.0 / voltage) * feederPower);
     }
 
-    public Command setPitchAngle(double degrees){
-        return new InstantCommand(()->{
-            pitchLeft.setTarget(degrees);
-            pitchRight.setTarget(-degrees);//either reversed
-        });
+    public void setPitchAngle(double degrees){
+        pitchLeft.setTarget(degrees);
+        pitchRight.setTarget(-degrees);//either reversed
     }
 
     public Command intake(){
@@ -138,6 +137,26 @@ public class IntakeSubsystem extends Subsystem {
         return new InstantCommand(()->{
             setFeederPower(0);
         });
+    }
+
+    public Command pitchDown(){
+        return new InstantCommand(()->setPitchAngle(-30));
+    }
+
+    public Command pitchUp(){
+        return new InstantCommand(()->setPitchAngle(10));
+    }
+
+    public Command resetPitch(){
+        return new InstantCommand(()->setPitchAngle(0));
+    }
+
+    public Command reset(){
+        return new SequentialCommand(
+                resetPitch(),
+                stopIntake(),
+                stopRollers()
+        );
     }
 
 }

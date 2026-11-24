@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode.control;
 import com.pedropathing.math.Vector2D;
 
 public final class Interpolation {
-    private static final Vector2D HIVE_RIGHT = Vector2D.cartesian(57.7, 54.9);
-    private static final Vector2D HIVE_LEFT = Vector2D.cartesian(57.7 + 1, 141.5 - 3 - 54.9);
 
     // Tabele ordonate crescator după distanță (în inci)
     // { distanta_inci, valoare }
@@ -25,21 +23,12 @@ public final class Interpolation {
     private Interpolation() {
     }
 
-    public static double getAirTime(double x, double y) {
-        double distance = distanceToHive(x, y);
-        return lerpTable(AIR_TIME_TABLE, distance);
+    public static double getAirTime(Vector2D from, Vector2D hive) {
+        return lerpTable(AIR_TIME_TABLE, hive.minus(from).magnitude());
     }
 
-    public static double getFlywheelVelocity(double x, double y) {
-        double distance = distanceToHive(x, y);
-        return lerpTable(FLYWHEEL_TABLE, distance);
-    }
-
-    private static double distanceToHive(double x, double y) {
-        Vector2D hive = y > 70.75 ? HIVE_LEFT : HIVE_RIGHT;
-        double dx = hive.x() - x;
-        double dy = hive.y() - y;
-        return Math.hypot(dx, dy);
+    public static double getFlywheelVelocity(Vector2D from, Vector2D hive) {
+        return lerpTable(FLYWHEEL_TABLE, hive.minus(from).magnitude());
     }
 
     private static double lerpTable(double[][] table, double x) {

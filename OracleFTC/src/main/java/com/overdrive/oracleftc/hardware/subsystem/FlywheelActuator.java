@@ -95,6 +95,7 @@ public class FlywheelActuator {
                     double current = getVelocity();
 
                     if (!enabled || target <= 1.0) {
+                        pid.reset();
                         setAllMotorsPower(0.0);
                         addTelemetry(current, 0.0);
                         return;
@@ -102,7 +103,7 @@ public class FlywheelActuator {
 
                     double rawOutput = pid.update(target, current) + (kF * target);
                     double voltageScale = 12.0 / voltageSensor.getVoltage();
-                    double finalPower = clamp(rawOutput * voltageScale, -1.0, 1.0);
+                    double finalPower = clamp(rawOutput * voltageScale, 0.0, 1.0);
 
                     setAllMotorsPower(finalPower);
                     addTelemetry(current, finalPower);

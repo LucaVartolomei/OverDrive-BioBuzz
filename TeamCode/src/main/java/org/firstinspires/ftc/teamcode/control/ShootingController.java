@@ -6,17 +6,17 @@ import com.pedropathing.math.Vector2D;
 import com.pedropathing.math.Velocity;
 
 import org.firstinspires.ftc.teamcode.subsystem.ShooterSubsystem;
+import org.firstinspires.ftc.teamcode.utils.FieldConstants;
 
 //@Config("Shooting Controller")
 public final class ShootingController {
-    private static final double FIELD_HALF_Y = 70.75;
-    private static final Vector2D HIVE_POSITION_RIGHT = Vector2D.cartesian(57.7, 54.9);
-    private static final Vector2D HIVE_POSITION_LEFT = Vector2D.cartesian(57.7 + 1, 141.5 - 3 - 54.9);
-    private static final int SOTM_ITERATIONS = 10;
-    private static final double MIN_SOTM_SPEED = 1.0;
+    private static final int SOTM_ITERATIONS = 4;
+    private static final double MIN_SOTM_SPEED = 1.0; // in/s
 
-    public static double turningGain = 0.0;
-    public static boolean useVectorAim = true;
+    public static double turretOffsetX = 0.0;   // inches, fill in from CAD
+    public static double turretOffsetY = 0.0;
+
+    public static double turningGain = 0.0; // = latencySeconds * 180 / Math.PI
 
     private final ShooterSubsystem shooterSubsystem;
 
@@ -24,90 +24,33 @@ public final class ShootingController {
         this.shooterSubsystem = shooterSubsystem;
     }
 
-    // Tragere de pe loc (fara compensare de viteza)
     public void prepareForLocation(Pose pose) {
-        prepareForLocation(pose, Velocity.zero());
+        prepareForLocationSotm(pose, Velocity.zero());
     }
 
-    // Pregatire standard pentru o pozitie si viteza data
-    public void prepareForLocation(Pose pose, Velocity velocity) {
-        spinUp(pose);
-        aim(pose, velocity);
-    }
-
-    // Tragere din mers (SOTM) - alege automat intre modul virtualPose si modul vectorial
     public void prepareForLocationSotm(Pose pose, Velocity velocity) {
-        if (useVectorAim) {
-            prepareForLocationVector(pose, velocity);
-        } else {
-            prepareForLocationVirtualPose(pose, velocity);
-        }
+        double c = Math.cos(pose.heading()), s = Math.sin(pose.heading());
+        double rx = turretOffsetX * c - turretOffsetY * s;
+        double ry = turretOffsetX * s + turretOffsetY * c;
+        Vector2D turretPos = Vector2D.cartesian(pose.x() + rx, pose.y() + ry);
+
+        Vector2D hive = FieldConstants.hiveFor(pose.y());
+        Vector2D virtual = virtualRobot(turretPos, velocity.toVector2D(), hive);
+
+        shooterSubsystem.setShooterTarget(Interpolation.getFlywheelVelocity(virtual, hive));
+        double relativeDeg = Math.toDegrees(hive.minus(virtual).theta())
+                - Math.toDegrees(pose.heading());
+        shooterSubsystem.setTurretAngle(relativeDeg);
     }
 
-    // MODUL 1: SOTM folosind virtualPose (pentru aim si spinUp)
-    public void prepareForLocationVirtualPose(Pose pose, Velocity velocity) {
-        Pose virtualPose = calculateVirtualRobot(pose.toVector2D(), velocity.toVector2D())
-                .toPose(pose.heading());
-        spinUp(virtualPose);
-        aim(virtualPose, velocity);
-    }
+    private static Vector2D virtualRobot(Vector2D robot, Vector2D vel, Vector2D hive) {
+        if (vel.magnitude() < MIN_SOTM_SPEED) return robot;
 
-    // MODUL 2: SOTM folosind formula vectoriala in aim()
-    public void prepareForLocationVector(Pose pose, Velocity velocity) {
-        Vector2D virtualPos = calculateVirtualRobot(pose.toVector2D(), velocity.toVector2D());
-        // Poti folosi virtualPos pentru flywheel (distanta estimata) sau pose.toVector2D() pentru pozitia curenta
-        spinUp(virtualPos.toPose(pose.heading()));
-        aimVectorial(pose, velocity);
-    }
-
-    public void spinUp(Pose pose) {
-        double targetVelocity = Interpolation.getFlywheelVelocity(pose.x(), pose.y());
-        shooterSubsystem.setShooterPower(targetVelocity);
-    }
-
-    // aim() cand primeste deja pozitia tinta (de ex. virtualPose sau pose de pe loc)
-    public void aim(Pose pose, Velocity velocity) {
-        Vector2D hivePosition = getTargetHive(pose.y());
-        double turretAngle = Math.toDegrees(hivePosition.minus(pose.toVector2D()).theta());
-        applyTurretTarget(turretAngle, pose.heading(), velocity.omega);
-    }
-
-    // aim() bazat pe formula vectoriala: (p_hive - p_robot) - v_robot * airTime
-    public void aimVectorial(Pose pose, Velocity velocity) {
-        Vector2D robotPos = pose.toVector2D();
-        Vector2D robotVel = velocity.toVector2D();
-        Vector2D hivePosition = getTargetHive(robotPos.y());
-
-        double airTime = Interpolation.getAirTime(robotPos.x(), robotPos.y());
-        Vector2D aimVector = hivePosition
-                .minus(robotPos)
-                .minus(robotVel.times(airTime));
-
-        double turretAngle = Math.toDegrees(aimVector.theta());
-        applyTurretTarget(turretAngle, pose.heading(), velocity.omega);
-    }
-
-    private static Vector2D calculateVirtualRobot(Vector2D robotPose, Vector2D robotVelocity) {
-        if (robotVelocity.magnitude() < MIN_SOTM_SPEED) {
-            return robotPose;
-        }
-
-        Vector2D virtualPose = robotPose;
+        Vector2D virtual = robot;
         for (int i = 0; i < SOTM_ITERATIONS; i++) {
-            double airTime = Interpolation.getAirTime(virtualPose.x(), virtualPose.y());
-            virtualPose = robotPose.plus(robotVelocity.times(airTime));
+            double airTime = Interpolation.getAirTime(virtual, hive);
+            virtual = robot.plus(vel.times(airTime));
         }
-        return virtualPose;
-    }
-
-    private static Vector2D getTargetHive(double y) {
-        return y > FIELD_HALF_Y ? HIVE_POSITION_LEFT : HIVE_POSITION_RIGHT;
-    }
-
-    private void applyTurretTarget(double fieldTargetAngleDeg, double robotHeadingRad, double omega) {
-        double relativeTurretAngleDeg = fieldTargetAngleDeg
-                - Math.toDegrees(robotHeadingRad)
-                - turningGain * omega;
-        shooterSubsystem.setTurretAngle(relativeTurretAngleDeg);
+        return virtual;
     }
 }
